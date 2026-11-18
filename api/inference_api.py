@@ -108,7 +108,8 @@ def create_app(
     ) -> Response:
         started = time.perf_counter()
         response = await call_next(request)
-        route = getattr(request.scope.get("route"), "path", request.url.path)
+        # Unknown paths must not create unbounded Prometheus label values.
+        route = getattr(request.scope.get("route"), "path", "unmatched")
         REQUESTS.labels(route, response.status_code).inc()
         LATENCY.labels(route).observe(time.perf_counter() - started)
         response.headers["X-Content-Type-Options"] = "nosniff"
