@@ -101,3 +101,14 @@ def test_production_requires_authentication_and_model(monkeypatch, tmp_path):
 def test_rate_limiter_rejects_invalid_configuration(limit, window):
     with pytest.raises(ValueError, match="positive"):
         SlidingWindowRateLimiter(limit=limit, window_seconds=window)
+
+
+def test_unknown_routes_do_not_explode_prometheus_label_cardinality(tmp_path):
+    app = create_app(bundle_path=create_test_bundle(tmp_path / "bundle"))
+    probe = "/not-found-unique-high-cardinality-probe"
+    with TestClient(app) as client:
+        assert client.get(probe).status_code == 404
+        metrics = client.get("/metrics").text
+
+    assert probe not in metrics
+    assert 'route="unmatched"' in metrics
